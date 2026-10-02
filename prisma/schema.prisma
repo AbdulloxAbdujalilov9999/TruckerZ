@@ -1,0 +1,277 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  OWNER
+  DISPATCHER
+  OFFICE
+  DRIVER
+}
+
+enum TruckStatus {
+  ACTIVE
+  IDLE
+  INACTIVE
+}
+
+enum LoadStatus {
+  BOOKED
+  IN_TRANSIT
+  DELIVERED
+  INVOICED
+  PAID
+}
+
+enum StopType {
+  PICKUP
+  STOP
+  DELIVERY
+}
+
+enum PaymentStatus {
+  PENDING
+  RECEIVED
+}
+
+enum ExpenseCategory {
+  FUEL
+  TRUCK_PAYMENT
+  INSURANCE
+  MAINTENANCE
+  TIRES
+  PERMITS_LICENSING
+  TOLLS
+  SOFTWARE_PHONE
+  PARKING
+  LUMPER
+  DETENTION_FEES
+  SCALE_FEES
+  TRAILER_RENT
+  DRIVER_ADVANCE
+  MEALS
+  LODGING
+  TRAINING
+  UNIFORMS
+  OFFICE_SUPPLIES
+  ACCOUNTING_LEGAL
+  BANK_FEES
+  FINES_VIOLATIONS
+  CARGO_CLAIMS
+  ELD_GPS
+  DISPATCH_SERVICE
+  ROAD_SIDE_ASSISTANCE
+  OTHER
+}
+
+enum DocumentType {
+  COI
+  W9
+  RATE_CON
+  BOL
+  POD
+  RECEIPT
+  OTHER
+}
+
+// ---------- Models ----------
+
+model Company {
+  id           String   @id @default(cuid())
+  name         String
+  supportEmail String?
+  supportPhone String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users    User[]
+  fleets   Fleet[]
+  expenses Expense[]
+  documents Document[]
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  passwordHash String
+  name        String
+  role        Role
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Dispatcher-only: % of load rate earned as a dispatch commission
+  dispatchFeePercent Decimal? @db.Decimal(5, 2)
+
+  // Driver-only: pay model
+  driverPayType  DriverPayType?
+  driverPayRate  Decimal?       @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  truckAsDriver  Truck[]  @relation("TruckDriver")
+  loadsAsDriver  Load[]   @relation("LoadDriver")
+  loadsCreated   Load[]   @relation("LoadCreatedBy")
+  documentsUploaded Document[] @relation("DocumentUploadedBy")
+
+  @@index([companyId])
+}
+
+enum DriverPayType {
+  PERCENTAGE
+  PER_MILE
+  SALARY
+  HOURLY
+}
+
+model Fleet {
+  id        String   @id @default(cuid())
+  name      String
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  trucks Truck[]
+  loads  Load[]
+
+  @@index([companyId])
+}
+
+model Truck {
+  id         String      @id @default(cuid())
+  unitNumber String
+  type       String?
+  status     TruckStatus @default(ACTIVE)
+  fleetId    String
+  fleet      Fleet       @relation(fields: [fleetId], references: [id], onDelete: Cascade)
+  driverId   String?
+  driver     User?       @relation("TruckDriver", fields: [driverId], references: [id])
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  loads    Load[]
+  expenses Expense[]
+
+  @@index([fleetId])
+}
+
+model Load {
+  id          String     @id @default(cuid())
+  loadNumber  String?
+  status      LoadStatus @default(BOOKED)
+
+  fleetId String
+  fleet   Fleet  @relation(fields: [fleetId], references: [id], onDelete: Cascade)
+  truckId String
+  truck   Truck  @relation(fields: [truckId], references: [id])
+  driverId String?
+  driver   User?  @relation("LoadDriver", fields: [driverId], references: [id])
+
+  originAddress      String
+  originCity         String
+  originState        String
+  destinationAddress String
+  destinationCity    String
+  destinationState   String
+
+  broker String
+
+  rate             Decimal @db.Decimal(10, 2)
+  miles            Decimal @db.Decimal(10, 1)
+  dispatchFeePercent Decimal @db.Decimal(5, 2) @default(0)
+  dispatchFeeAmount  Decimal @db.Decimal(10, 2) @default(0)
+  deductions       Decimal @db.Decimal(10, 2) @default(0)
+  accessorials     Json?
+
+  pickupDate   DateTime
+  deliveryDate DateTime?
+  notes        String?
+
+  createdById String
+  createdBy   User   @relation("LoadCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  stops     LoadStop[]
+  payment   Payment?
+  documents Document[]
+
+  @@index([fleetId])
+  @@index([truckId])
+  @@index([status])
+}
+
+model LoadStop {
+  id       String   @id @default(cuid())
+  loadId   String
+  load     Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  sequence Int
+  type     StopType
+  address  String
+  city     String
+  state    String
+
+  @@index([loadId])
+}
+
+model Payment {
+  id       String        @id @default(cuid())
+  loadId   String        @unique
+  load     Load          @relation(fields: [loadId], references: [id], onDelete: Cascade)
+
+  // computed server-side at creation time from the load; never hand-edited
+  grossAmount      Decimal @db.Decimal(10, 2)
+  fuelAmount       Decimal @db.Decimal(10, 2) @default(0)
+  driverFeeAmount  Decimal @db.Decimal(10, 2) @default(0)
+  dispatcherEarning Decimal @db.Decimal(10, 2) @default(0)
+
+  status PaymentStatus @default(PENDING)
+  date   DateTime      @default(now())
+  notes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  companyId   String
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  truckId     String?
+  truck       Truck?          @relation(fields: [truckId], references: [id])
+  category    ExpenseCategory
+  amount      Decimal         @db.Decimal(10, 2)
+  date        DateTime
+  description String?
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([truckId])
+}
+
+model Document {
+  id         String       @id @default(cuid())
+  companyId  String
+  company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  loadId     String?
+  load       Load?        @relation(fields: [loadId], references: [id])
+  type       DocumentType
+  filePath   String
+  uploadedById String
+  uploadedBy User         @relation("DocumentUploadedBy", fields: [uploadedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([loadId])
+}

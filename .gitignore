@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# prisma generated client (regenerated via `npx prisma generate`)
+/src/generated/
+
+# local file uploads (dev-only storage)
+/storage/uploads/
+!/storage/uploads/.gitkeep
