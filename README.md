@@ -24,10 +24,9 @@ generates.
 
 ### 2. Get your connection details
 
-- **Project Settings → Database → Connect → Session pooler** — copy that connection string. Use
-  the **session pooler** (port 5432), not the direct connection (IPv6-only, often unreachable) and
-  not the transaction pooler (port 6543, only worth it at serverless scale — it also doesn't
-  reliably support `prisma migrate`).
+- **Project Settings → Database → Connect** — copy **both** pooler connection strings, not the
+  direct connection (IPv6-only, often unreachable). Which one you actually use depends on where
+  the app runs — see the callout below.
 - **Project Settings → API** — copy the **Project URL** and the **`secret` key** (not the
   `publishable`/`anon` one — the secret key is server-only and bypasses storage permissions, so
   never expose it to the browser).
@@ -46,6 +45,20 @@ SUPABASE_STORAGE_BUCKET="truckerz-uploads"
 The `uselibpqcompat=true` flag matters: `pg` v8.23+ otherwise treats `sslmode=require` as full
 certificate-chain verification, which fails against Supabase's pooler cert chain. This flag
 restores the "encrypt, don't verify" behavior that `require` is supposed to mean.
+
+> **Session pooler (port 5432) vs. transaction pooler (port 6543) — this isn't optional, pick based
+> on where `DATABASE_URL` is actually set:**
+>
+> - **Local dev or a VPS** (one persistent Node process): use the **session pooler**. Supports
+>   migrations, advisory locks, everything — it's just a normal connection.
+> - **Vercel or any other serverless host**: use the **transaction pooler**. Verified this directly —
+>   normal app queries work fine on it (including several fired concurrently, like the dashboard
+>   does), but the *session pooler's* connection limit is sized for one persistent server and gets
+>   exhausted fast once Vercel spins up multiple function instances under real traffic. That's the
+>   actual cause if a deployed page loads fine once and then intermittently 500s.
+> - Either way, **run migrations (`prisma migrate deploy`) from a session-pooler connection**, even
+>   if the deployed app itself uses the transaction pooler — Prisma's migration engine doesn't
+>   reliably work over the transaction pooler (it hangs rather than erroring).
 
 The storage bucket doesn't need to be created by hand — the app creates it automatically (private,
 not public) on first upload if it doesn't already exist.
