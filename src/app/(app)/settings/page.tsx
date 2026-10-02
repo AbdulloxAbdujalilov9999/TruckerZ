@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/scope";
 import { CreateFleetButton } from "./create-fleet-button";
 import { CreateTeamMemberButton } from "./create-team-member-button";
+import { EditTeamMemberButton } from "./edit-team-member-button";
 
 const ROLE_LABELS: Record<string, string> = {
   OWNER: "Owner",
@@ -70,6 +71,7 @@ export default async function SettingsPage() {
                 <th className="px-5 py-3 font-medium">Email</th>
                 <th className="px-5 py-3 font-medium">Role</th>
                 <th className="px-5 py-3 font-medium">Pay / Fee</th>
+                <th className="px-5 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
@@ -86,6 +88,20 @@ export default async function SettingsPage() {
                             u.driverPayRate != null ? ` · ${u.driverPayRate}` : ""
                           }`
                         : "—"}
+                  </td>
+                  <td className="px-5 py-3">
+                    <EditTeamMemberButton
+                      member={{
+                        id: u.id,
+                        name: u.name,
+                        email: u.email,
+                        role: u.role,
+                        dispatchFeePercent: u.dispatchFeePercent?.toString() ?? null,
+                        driverPayType: u.driverPayType,
+                        driverPayRate: u.driverPayRate?.toString() ?? null,
+                      }}
+                      isSelf={u.id === owner.id}
+                    />
                   </td>
                 </tr>
               ))}
