@@ -3,7 +3,11 @@ import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const isLocal = (process.env.DATABASE_URL ?? "").includes("localhost");
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL,
+  ssl: isLocal ? undefined : { rejectUnauthorized: false },
+});
 const prisma = new PrismaClient({ adapter });
 
 const BROKERS = ["Meridian Freight Systems", "Coastal Logistics", "Apex Brokerage", "Lonestar Transport", "Summit Freight"];

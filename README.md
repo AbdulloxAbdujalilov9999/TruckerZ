@@ -11,38 +11,44 @@ as a from-scratch clone of FleetChart's feature set, under its own brand.
   an explicit adapter and moved the datasource URL out of `schema.prisma` into `prisma.config.ts`)
 - **Auth.js (NextAuth v5)**, Credentials provider, bcrypt password hashing, JWT sessions
 - **recharts** for the dashboard charts
-- File uploads (COI/W9/rate-con/BOL/POD) are stored on local disk under `storage/uploads/`,
-  served through an authenticated route (`/api/files/[documentId]`) that checks the requester's
-  company before returning anything — **dev-only**, swap for S3-compatible storage before any real
-  deployment.
+- **Supabase** for both the database and file storage — chosen specifically because it's portable:
+  a plain Postgres connection string and an S3-compatible storage bucket, neither tied to any one
+  host. Works the same from local dev, Vercel, or a plain VPS later.
 
-## First-time setup
+## First-time setup (Supabase)
 
-### 1. Install Postgres.app (or point `DATABASE_URL` at any Postgres you have)
+### 1. Create a Supabase project
 
-Download from **https://postgresapp.com**, drag it to Applications, open it, and click
-"Initialize" to start a local Postgres server on port 5432. No Homebrew or Docker needed.
+Go to **https://supabase.com**, sign up, create a new project. Save the database password it
+generates.
 
-### 2. Create the database
+### 2. Get your connection details
 
-```bash
-/Applications/Postgres.app/Contents/Versions/latest/bin/createdb truckerz
+- **Project Settings → Database → Connect → Session pooler** — copy that connection string. Use
+  the **session pooler** (port 5432), not the direct connection (IPv6-only, often unreachable) and
+  not the transaction pooler (port 6543, only worth it at serverless scale — it also doesn't
+  reliably support `prisma migrate`).
+- **Project Settings → API** — copy the **Project URL** and the **`secret` key** (not the
+  `publishable`/`anon` one — the secret key is server-only and bypasses storage permissions, so
+  never expose it to the browser).
+
+### 3. Configure `.env`
+
+```
+DATABASE_URL="postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres?sslmode=require&uselibpqcompat=true"
+AUTH_SECRET="generate-with-npx-auth-secret"
+
+SUPABASE_URL="https://PROJECT_REF.supabase.co"
+SUPABASE_SECRET_KEY="your-secret-key"
+SUPABASE_STORAGE_BUCKET="truckerz-uploads"
 ```
 
-(Or use the Postgres.app GUI's "+" button to add a database named `truckerz`.)
+The `uselibpqcompat=true` flag matters: `pg` v8.23+ otherwise treats `sslmode=require` as full
+certificate-chain verification, which fails against Supabase's pooler cert chain. This flag
+restores the "encrypt, don't verify" behavior that `require` is supposed to mean.
 
-### 3. Configure environment variables
-
-`.env` is already set up for a local default:
-
-```
-DATABASE_URL="postgresql://YOUR_MAC_USERNAME@localhost:5432/truckerz"
-AUTH_SECRET="dev-only-secret-change-before-any-real-deployment"
-```
-
-Confirm `YOUR_MAC_USERNAME` matches `whoami` — Postgres.app creates a default superuser matching
-your macOS username with no password. Generate a real `AUTH_SECRET` before deploying anywhere with
-`npx auth secret`.
+The storage bucket doesn't need to be created by hand — the app creates it automatically (private,
+not public) on first upload if it doesn't already exist.
 
 ### 4. Install dependencies, migrate, seed
 
@@ -67,6 +73,13 @@ Open http://localhost:3000 — you'll land on `/login`.
 Or sign up fresh at `/signup` — that creates a brand-new company with you as Owner and an empty
 "Main Fleet".
 
+### Running against local Postgres instead
+
+If you'd rather use a local Postgres (e.g. Postgres.app) for development, just point
+`DATABASE_URL` at `postgresql://localhost:5432/truckerz` — the SSL/libpq-compat flags are skipped
+automatically for `localhost` (see `src/lib/prisma.ts`). You'd still need Supabase (or an
+S3-compatible bucket) for file storage, since that's a separate concern from the database.
+
 ## What's real vs. what's scaffolded
 
 This build is **"core app first"**: the full data model, every page, role-based access, the status
@@ -84,11 +97,12 @@ explicitly **not** built yet (by design, to ship the core product first):
 | Stripe billing for TruckerZ's own subscription plans | **Not built.** Not needed until this goes to real customers. |
 
 Everything else from the walkthrough — multi-tenant companies, multiple fleets per company,
-role-scoped navigation (Owner/Dispatcher/Office/Driver), the Booked → In Transit → Delivered →
-Invoiced → Paid status pipeline (with Delivered never auto-settable), read-only computed payment
-fields, dispatcher commission tracking, multi-stop loads, accessorials, the dashboard with its
-8 stat cards + 4 charts + a separately-date-ranged "Detailed Analytics" block — is implemented and
-working against real data.
+role-scoped navigation (Owner/Dispatcher/Office/Driver, with Drivers and Office never seeing
+financial figures, enforced both in the UI and server-side in `src/proxy.ts`), the Booked → In
+Transit → Delivered → Invoiced → Paid status pipeline (with Delivered never auto-settable),
+read-only computed payment fields, dispatcher commission tracking, multi-stop loads, accessorials,
+document uploads to real cloud storage, and the dashboard with its 8 stat cards + 4 charts + a
+separately-date-ranged "Detailed Analytics" block — is implemented and working against real data.
 
 ## Known items
 
@@ -97,6 +111,11 @@ working against real data.
   only use the Postgres adapter), and `npm audit fix --force` would downgrade Prisma to 6.x, which
   uses an incompatible config format from what's wired up here. Worth revisiting when Prisma ships
   a patched 7.x release.
+- The Supabase pooler used here is in `ap-northeast-2` (Seoul) — every query pays that round trip
+  (roughly 1-2s per page load during testing). Fine for development; before any real usage, create
+  the Supabase project in a region close to wherever the app actually runs.
+- Supabase's free tier pauses a project after 7 days with no activity (a couple clicks to resume,
+  but worth knowing if you want zero chance of that — their paid tier removes it).
 - Search inputs (Trucks/Loads pages) push a new URL on every keystroke rather than debouncing —
   fine for a demo dataset, worth debouncing before it's handling thousands of rows.
 - There's no self-serve "forgot password" flow yet, and inviting a teammate in Settings sets their
@@ -108,6 +127,7 @@ working against real data.
 prisma/schema.prisma       Data model
 prisma/seed.ts              Demo data
 src/lib/auth.ts             NextAuth config (Credentials + Prisma)
+src/lib/supabase-storage.ts  Server-only Supabase Storage client (upload/download)
 src/proxy.ts                 Route guard (Next.js 16's middleware replacement; runs on the Node runtime, so it can safely import Prisma)
 src/lib/actions/*.ts         Server actions (all mutations go through these)
 src/lib/business.ts          Status-pipeline rules + payment amount calculations

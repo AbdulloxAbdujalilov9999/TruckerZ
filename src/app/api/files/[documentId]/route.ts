@@ -1,10 +1,7 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-const STORAGE_ROOT = path.join(process.cwd(), "storage", "uploads");
+import { downloadFromStorage } from "@/lib/supabase-storage";
 
 export async function GET(
   _req: Request,
@@ -24,15 +21,14 @@ export async function GET(
   }
 
   try {
-    const filePath = path.join(STORAGE_ROOT, doc.companyId, doc.filePath);
-    const buffer = await readFile(filePath);
-    const filename = doc.filePath.replace(/^[0-9a-f-]{36}-/, "");
-    return new NextResponse(buffer, {
+    const buffer = await downloadFromStorage(doc.filePath);
+    const filename = doc.filePath.split("/").pop()!.replace(/^[0-9a-f-]{36}-/, "");
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         "Content-Disposition": `inline; filename="${filename}"`,
       },
     });
   } catch {
-    return NextResponse.json({ error: "File missing on disk." }, { status: 404 });
+    return NextResponse.json({ error: "File missing in storage." }, { status: 404 });
   }
 }
