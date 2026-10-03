@@ -2,25 +2,16 @@ import { FileText } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/scope";
 import { EmptyState } from "@/components/empty-state";
-import { formatDate } from "@/lib/format";
+import { formatDate, DOCUMENT_TYPE_LABELS } from "@/lib/format";
 import { UploadDocumentButton } from "./upload-document-button";
-
-const TYPE_LABELS: Record<string, string> = {
-  COI: "Certificate of Insurance",
-  W9: "W-9",
-  RATE_CON: "Rate Confirmation",
-  BOL: "Bill of Lading",
-  POD: "Proof of Delivery",
-  RECEIPT: "Receipt",
-  OTHER: "Other",
-};
 
 export default async function DocumentsPage() {
   const user = await requireUser();
 
+  // Driver-file paperwork (CDL, medical card, etc.) lives on /drivers instead.
   const [documents, loads] = await Promise.all([
     prisma.document.findMany({
-      where: { companyId: user.companyId },
+      where: { companyId: user.companyId, userId: null },
       include: { uploadedBy: { select: { name: true } }, load: { select: { loadNumber: true, broker: true } } },
       orderBy: { createdAt: "desc" },
     }),
@@ -59,7 +50,7 @@ export default async function DocumentsPage() {
             <tbody>
               {documents.map((d) => (
                 <tr key={d.id} className="border-b border-border last:border-0">
-                  <td className="px-5 py-3 font-medium">{TYPE_LABELS[d.type]}</td>
+                  <td className="px-5 py-3 font-medium">{DOCUMENT_TYPE_LABELS[d.type]}</td>
                   <td className="px-5 py-3 text-muted">
                     {d.load ? `${d.load.broker} · ${d.load.loadNumber ?? "no #"}` : "—"}
                   </td>

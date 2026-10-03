@@ -103,8 +103,8 @@ explicitly **not** built yet (by design, to ship the core product first):
 |---|---|
 | Rate confirmation PDF → auto-filled load (AI extraction) | **Not built.** "Create with AI" button is visibly disabled in the Loads page. Wiring this up needs a model-provider API key (OpenAI/Anthropic/etc.) and a confidence-threshold + review-queue UI. |
 | Motive ELD integration (live map, GPS detention proof, state miles) | **Not built.** Needs a Motive developer/partner account and OAuth flow. |
-| EFS / Comdata fuel card statement import | **Not built.** Needs real sample statement exports to build an accurate parser against. |
-| IFTA worksheet export | **Not built.** The `Expense` and `Load` models already carry everything needed (state, miles, fuel category) — this is a report/export feature to add on top, not a data-model change. |
+| EFS / Comdata fuel card statement import | **Not built.** That's bulk/automatic import from a card provider's statement file specifically. Manual fuel receipt entry (date, state, gallons, amount, optional photo) is built — see below. Needs real sample statement exports to build an accurate parser against. |
+| IFTA worksheet export | **Not built as a generated worksheet/PDF.** The underlying data (state + gallons per fuel purchase, miles per load) is now captured — this is a report/export feature to add on top, not a data-model change. |
 | Scheduled email reports + alert emails (detention found, GPS dropped, Monday digest, etc.) | **Not built.** Needs an email provider (Resend/Postmark/SendGrid) and a background job scheduler. |
 | Factoring packet PDF export / invoice PDF generation | **Not built.** Documents are stored and linkable to loads today; turning them into a generated PDF packet is additive. |
 | Stripe billing for TruckerZ's own subscription plans | **Not built.** Not needed until this goes to real customers. |
@@ -116,6 +116,19 @@ Transit → Delivered → Invoiced → Paid status pipeline (with Delivered neve
 read-only computed payment fields, dispatcher commission tracking, multi-stop loads, accessorials,
 document uploads to real cloud storage, and the dashboard with its 8 stat cards + 4 charts + a
 separately-date-ranged "Detailed Analytics" block — is implemented and working against real data.
+
+Two more, added after the initial build:
+
+- **Driver files** (`/drivers`, Owner-only) — each driver's CDL, medical card, drug test result,
+  or MVR in one place, with an expiry date per document and a visible Expired/Expiring Soon/Valid
+  badge. Matches the real app's "driver files that warn you" — the only piece not built is the
+  actual email alert before something lapses (same email-provider gap as the other alert emails
+  above).
+- **Fuel receipts** (`/fuel-receipts`, every role) — a manual alternative to card-statement import:
+  date, state, gallons, amount, and an optional receipt photo, all stored as a regular `Expense`
+  (so it shows up in the Expenses totals too) with the extra fields attached. Drivers can only
+  submit against their own assigned truck and only ever see their own submissions — not the whole
+  fleet's fuel spend.
 
 ## Known items
 

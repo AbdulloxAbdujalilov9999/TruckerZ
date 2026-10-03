@@ -73,3 +73,38 @@ export const TRUCK_STATUS_LABELS: Record<string, string> = {
   IDLE: "Idle",
   INACTIVE: "Inactive",
 };
+
+export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  COI: "Certificate of Insurance",
+  W9: "W-9",
+  RATE_CON: "Rate Confirmation",
+  BOL: "Bill of Lading",
+  POD: "Proof of Delivery",
+  RECEIPT: "Receipt",
+  CDL: "CDL",
+  MEDICAL_CARD: "Medical Card",
+  DRUG_TEST_RESULT: "Drug Test Result",
+  MVR: "MVR (Motor Vehicle Record)",
+  OTHER: "Other",
+};
+
+// Driver-file-specific document types (company paperwork like COI/W9/rate
+// cons lives on the Documents page instead).
+export const DRIVER_FILE_DOCUMENT_TYPES = [
+  "CDL",
+  "MEDICAL_CARD",
+  "DRUG_TEST_RESULT",
+  "MVR",
+  "OTHER",
+] as const;
+
+export type ExpiryStatus = "expired" | "expiring_soon" | "valid" | "none";
+
+export function getExpiryStatus(expiresAt: Date | string | null): ExpiryStatus {
+  if (!expiresAt) return "none";
+  const date = typeof expiresAt === "string" ? new Date(expiresAt) : expiresAt;
+  const daysUntil = (date.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+  if (daysUntil < 0) return "expired";
+  if (daysUntil <= 30) return "expiring_soon";
+  return "valid";
+}

@@ -10,6 +10,8 @@ import {
   Receipt,
   FileText,
   Settings,
+  Fuel,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { navForRole, type AppRole } from "@/lib/nav";
@@ -20,15 +22,19 @@ const ICONS: Record<string, LucideIcon> = {
   load: Package,
   payment: CreditCard,
   expense: Receipt,
+  fuel: Fuel,
   document: FileText,
+  drivers: Users,
   settings: Settings,
 };
+
+const ADMIN_ICONS = new Set(["document", "drivers", "settings"]);
 
 export function Sidebar({ role }: { role: AppRole }) {
   const pathname = usePathname();
   const items = navForRole(role);
-  const overview = items.filter((i) => i.icon !== "document" && i.icon !== "settings");
-  const admin = items.filter((i) => i.icon === "document" || i.icon === "settings");
+  const overview = items.filter((i) => !ADMIN_ICONS.has(i.icon));
+  const admin = items.filter((i) => ADMIN_ICONS.has(i.icon));
 
   return (
     <aside className="hidden w-60 shrink-0 border-r border-border bg-surface md:flex md:flex-col">

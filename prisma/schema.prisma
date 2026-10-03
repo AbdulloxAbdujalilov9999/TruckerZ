@@ -78,6 +78,10 @@ enum DocumentType {
   BOL
   POD
   RECEIPT
+  CDL
+  MEDICAL_CARD
+  DRUG_TEST_RESULT
+  MVR
   OTHER
 }
 
@@ -120,6 +124,8 @@ model User {
   loadsAsDriver  Load[]   @relation("LoadDriver")
   loadsCreated   Load[]   @relation("LoadCreatedBy")
   documentsUploaded Document[] @relation("DocumentUploadedBy")
+  documentsOnFile   Document[] @relation("DocumentForUser")
+  expensesSubmitted Expense[]  @relation("ExpenseSubmittedBy")
 
   @@index([companyId])
 }
@@ -253,6 +259,18 @@ model Expense {
   date        DateTime
   description String?
 
+  // Fuel-receipt specifics (set when category = FUEL; nullable otherwise).
+  // State matters here specifically for IFTA: fuel bought in a state with
+  // no miles run is exactly the kind of mismatch the real worksheet flags.
+  state           String?
+  gallons         Decimal? @db.Decimal(8, 3)
+  receiptFilePath String?
+
+  // Who actually submitted this (a driver photographing a receipt from the
+  // road, typically) — distinct from who it's billed against (truckId).
+  submittedById String?
+  submittedBy   User?   @relation("ExpenseSubmittedBy", fields: [submittedById], references: [id])
+
   createdAt DateTime @default(now())
 
   @@index([companyId])
@@ -265,6 +283,13 @@ model Document {
   company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   loadId     String?
   load       Load?        @relation(fields: [loadId], references: [id])
+
+  // Set instead of loadId when this document belongs to a driver's file
+  // (CDL, medical card, etc.) rather than to a load.
+  userId String?
+  user   User?   @relation("DocumentForUser", fields: [userId], references: [id])
+  expiresAt DateTime?
+
   type       DocumentType
   filePath   String
   uploadedById String
@@ -274,4 +299,5 @@ model Document {
 
   @@index([companyId])
   @@index([loadId])
+  @@index([userId])
 }
