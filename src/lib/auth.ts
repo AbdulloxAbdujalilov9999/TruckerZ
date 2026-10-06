@@ -6,6 +6,13 @@ import { prisma } from "@/lib/prisma";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
+  // Auth.js checks the incoming Host header against a trusted list and
+  // rejects anything else ("UntrustedHost"). Vercel gets this for free
+  // because Auth.js auto-detects the VERCEL env var; Railway (or any other
+  // host) doesn't set that, so without this the app builds and starts fine
+  // but every login silently fails. Safe here because Railway terminates
+  // TLS and sets Host itself — nothing attacker-controlled reaches this.
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {

@@ -93,6 +93,43 @@ If you'd rather use a local Postgres (e.g. Postgres.app) for development, just p
 automatically for `localhost` (see `src/lib/prisma.ts`). You'd still need Supabase (or an
 S3-compatible bucket) for file storage, since that's a separate concern from the database.
 
+## Deploying
+
+The database and storage (Supabase) stay the same regardless of host — only `DATABASE_URL`'s
+pooler choice changes, and that's based on how the host runs the app, not which host it is.
+
+### Railway
+
+Railway runs this as one persistent container (same model as local dev), not serverless
+functions, so use the **session pooler** (port 5432) for `DATABASE_URL` — same value as local
+dev/`.env`, not the transaction-pooler variant Vercel needs below.
+
+1. New Project → **Deploy from GitHub repo** → pick this repo.
+2. Railway's Nixpacks builder auto-detects this as a Next.js app (it reads the `build`/`start`
+   scripts in `package.json`) — `railway.json` in this repo pins that explicitly so there's no
+   ambiguity. No Procfile or custom build command needed.
+3. In the service's **Variables** tab, add all 5: `DATABASE_URL`, `AUTH_SECRET`, `SUPABASE_URL`,
+   `SUPABASE_SECRET_KEY`, `SUPABASE_STORAGE_BUCKET` — same values as your local `.env`, except
+   generate a fresh `AUTH_SECRET` for production rather than reusing the local dev one (any random
+   32+ byte string works: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`).
+4. Deploy. Railway assigns a dynamic `PORT` itself — `next start` already reads it automatically
+   (verified directly: ran the production build with `PORT=4322` and it bound to that port).
+
+**Important fix already applied for this:** Auth.js rejects requests from a host it doesn't
+recognize ("UntrustedHost") unless told otherwise. Vercel gets this for free since Auth.js
+auto-detects Vercel's own env var; Railway doesn't set anything Auth.js recognizes, so without
+`trustHost: true` (now set in `src/lib/auth.ts`) **the app would build and start fine, but every
+single login would fail silently.** Caught this by actually running the production build locally
+on a non-default port before writing this section — don't skip that step if you change hosts again.
+
+### Vercel
+
+Vercel runs this as serverless functions — use the **transaction pooler** (port 6543) for
+`DATABASE_URL` instead, for the reasons in "Known items" below. Same 5 env vars, added under
+Project Settings → Environment Variables (Vercel's own Supabase integration has a separate OAuth
+flow that can fail independently of the app — if it does, just add the variables manually; the
+app doesn't care how they got there).
+
 ## What's real vs. what's scaffolded
 
 This build is **"core app first"**: the full data model, every page, role-based access, the status
@@ -132,11 +169,13 @@ Two more, added after the initial build:
 
 ## Known items
 
-- `npm audit` currently flags 4 high-severity advisories in Prisma's own transitive dependencies
-  (`deepmerge-ts`, bundled `mysql2` driver) — both are in code paths this app never exercises (we
-  only use the Postgres adapter), and `npm audit fix --force` would downgrade Prisma to 6.x, which
-  uses an incompatible config format from what's wired up here. Worth revisiting when Prisma ships
-  a patched 7.x release.
+- `npm audit` currently flags 9 high-severity advisories, all in dev-only dependency chains that
+  never ship to production or run against user input: Prisma's transitive `deepmerge-ts` and
+  bundled `mysql2` driver (we only use the Postgres adapter — `npm audit fix --force` would also
+  downgrade Prisma to 6.x, an incompatible config format from what's wired up here), and
+  `eslint-config-next`'s transitive `braces`/`micromatch` (only touched by `npm run lint`, never
+  by the running app). Worth revisiting when upstream ships patched releases, but none of these
+  are reachable in the deployed app.
 - The Supabase pooler used here is in `ap-northeast-2` (Seoul) — every query pays that round trip
   (roughly 1-2s per page load during testing). Fine for development; before any real usage, create
   the Supabase project in a region close to wherever the app actually runs.
