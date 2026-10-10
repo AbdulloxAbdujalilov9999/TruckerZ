@@ -28,8 +28,9 @@ export async function submitFuelReceipt(_prev: ActionState, formData: FormData):
   });
   if (!truck) return { error: "That truck doesn't belong to your company." };
 
-  // Drivers can only log fuel against the truck they're actually assigned to.
-  if (user.role === "DRIVER" && truck.driverId !== user.id) {
+  // Drivers can only log fuel against a truck they're actually assigned to
+  // (primary or, for a team truck, secondary driver).
+  if (user.role === "DRIVER" && truck.driverId !== user.id && truck.secondaryDriverId !== user.id) {
     return { error: "You can only submit receipts for your assigned truck." };
   }
 

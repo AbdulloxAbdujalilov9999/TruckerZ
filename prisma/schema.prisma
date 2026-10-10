@@ -122,6 +122,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   truckAsDriver  Truck[]  @relation("TruckDriver")
+  truckAsSecondaryDriver Truck[] @relation("TruckSecondaryDriver")
   loadsAsDriver  Load[]   @relation("LoadDriver")
   loadsCreated   Load[]   @relation("LoadCreatedBy")
   documentsUploaded Document[] @relation("DocumentUploadedBy")
@@ -162,6 +163,12 @@ model Truck {
   fleet      Fleet       @relation(fields: [fleetId], references: [id], onDelete: Cascade)
   driverId   String?
   driver     User?       @relation("TruckDriver", fields: [driverId], references: [id])
+  // Team-truck support: a second driver sharing the same unit. Which of the
+  // two actually drove a given run is still recorded per-load (Load.driverId),
+  // this just lets both of them see/use the truck itself (e.g. submit fuel
+  // receipts against it).
+  secondaryDriverId String?
+  secondaryDriver   User?  @relation("TruckSecondaryDriver", fields: [secondaryDriverId], references: [id])
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 

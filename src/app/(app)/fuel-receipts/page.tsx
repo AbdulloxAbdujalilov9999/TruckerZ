@@ -13,7 +13,7 @@ export default async function FuelReceiptsPage() {
   const trucks = await prisma.truck.findMany({
     where: {
       fleet: { companyId: user.companyId },
-      ...(isDriver ? { driverId: user.id } : {}),
+      ...(isDriver ? { OR: [{ driverId: user.id }, { secondaryDriverId: user.id }] } : {}),
     },
     select: { id: true, unitNumber: true },
     orderBy: { unitNumber: "asc" },

@@ -47,6 +47,7 @@ export default async function TrucksPage({
     },
     include: {
       driver: { select: { name: true } },
+      secondaryDriver: { select: { name: true } },
       fleet: { select: { name: true } },
       loads: {
         where: { status: { in: ["BOOKED", "IN_TRANSIT"] } },
@@ -143,7 +144,12 @@ export default async function TrucksPage({
                   <td className="px-5 py-3 text-muted">{truck.fleet.name}</td>
                   <td className="px-5 py-3 text-muted">{truck.type ?? "—"}</td>
                   <td className="px-5 py-3 text-muted">{truck.trailerNumber ?? "—"}</td>
-                  <td className="px-5 py-3 text-muted">{truck.driver?.name ?? "Unassigned"}</td>
+                  <td className="px-5 py-3 text-muted">
+                    {truck.driver?.name ?? "Unassigned"}
+                    {truck.secondaryDriver && (
+                      <div className="text-xs">+ {truck.secondaryDriver.name}</div>
+                    )}
+                  </td>
                   <td className="px-5 py-3">
                     <TruckStatusBadge
                       status={truck.status}

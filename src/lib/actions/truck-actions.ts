@@ -16,9 +16,13 @@ export async function createTruck(_prev: ActionState, formData: FormData): Promi
   const trailerNumber = String(formData.get("trailerNumber") || "").trim();
   const status = String(formData.get("status") || "ACTIVE");
   const driverId = String(formData.get("driverId") || "") || null;
+  const secondaryDriverId = String(formData.get("secondaryDriverId") || "") || null;
 
   if (!fleetId || !unitNumber) {
     return { error: "Fleet and unit number are required." };
+  }
+  if (secondaryDriverId && secondaryDriverId === driverId) {
+    return { error: "The second driver must be a different person than the primary driver." };
   }
 
   const fleet = await prisma.fleet.findFirst({
@@ -35,6 +39,7 @@ export async function createTruck(_prev: ActionState, formData: FormData): Promi
       trailerNumber: trailerNumber || null,
       status: status as "ACTIVE" | "IDLE" | "INACTIVE",
       driverId,
+      secondaryDriverId,
     },
   });
 

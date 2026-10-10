@@ -136,6 +136,23 @@ export function CreateTruckButton({
               </div>
             </div>
 
+            <div>
+              <label className="mb-1 block text-sm font-medium">Second Driver</label>
+              <select
+                name="secondaryDriverId"
+                defaultValue=""
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              >
+                <option value="">None</option>
+                {drivers.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-muted">For a team truck shared by two drivers.</p>
+            </div>
+
             {error && <p className="text-sm text-danger">{error}</p>}
 
             <div className="flex justify-end gap-2 pt-2">
