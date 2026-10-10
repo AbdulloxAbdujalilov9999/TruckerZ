@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { resolveDateRange } from "@/lib/date-range";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -107,7 +108,7 @@ export async function getDashboardData(companyId: string, fleetId?: string) {
 export async function getDriverDashboardData(companyId: string, driverId: string) {
   const loads = await prisma.load.findMany({
     where: { driverId, fleet: { companyId } },
-    select: { status: true, miles: true, pickupDate: true },
+    select: { status: true, miles: true, rate: true, pickupDate: true },
   });
 
   const statusOrder = ["BOOKED", "IN_TRANSIT", "DELIVERED", "INVOICED", "PAID"] as const;
@@ -126,11 +127,26 @@ export async function getDriverDashboardData(companyId: string, driverId: string
   const totalMiles = loads.reduce((s, l) => s + Number(l.miles), 0);
   const activeLoads = loads.filter((l) => l.status === "BOOKED" || l.status === "IN_TRANSIT").length;
 
+  // A driver's own gross — the rate on loads they personally hauled, not
+  // company profit/margin. Standard thing a percentage-pay driver tracks
+  // themselves; this is their own production, not someone else's figures.
+  const weekRange = resolveDateRange({ range: "week" });
+  const monthRange = resolveDateRange({ range: "month" });
+  const grossInRange = (range: { from: Date; to: Date }) =>
+    loads
+      .filter((l) => l.pickupDate >= range.from && l.pickupDate <= range.to)
+      .reduce((s, l) => s + Number(l.rate), 0);
+
+  const grossThisWeek = weekRange ? grossInRange(weekRange) : 0;
+  const grossThisMonth = monthRange ? grossInRange(monthRange) : 0;
+
   return {
     totalLoads: loads.length,
     activeLoads,
     totalMiles,
     loadsByStatus,
+    grossThisWeek,
+    grossThisMonth,
   };
 }
 

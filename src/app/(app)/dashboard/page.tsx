@@ -23,7 +23,9 @@ export default async function DashboardPage({
   const user = await requireUser();
   const params = await searchParams;
 
-  // Drivers never see company money — just their own loads and miles.
+  // Drivers never see company profit/margin or anyone else's numbers — but
+  // they do see their own gross (the rate on loads they personally hauled),
+  // same as any percentage-pay driver tracks for themselves.
   if (user.role === "DRIVER") {
     const driverData = await getDriverDashboardData(user.companyId, user.id);
     return (
@@ -31,7 +33,20 @@ export default async function DashboardPage({
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <p className="mt-1 text-sm text-muted">Welcome, {user.name?.split(" ")[0]}.</p>
 
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
+          <StatCard
+            label="Your Gross — This Week"
+            value={formatCurrency(driverData.grossThisWeek)}
+            hint="Loads picked up this week"
+            icon={DollarSign}
+            highlight
+          />
+          <StatCard
+            label="Your Gross — This Month"
+            value={formatCurrency(driverData.grossThisMonth)}
+            hint="Loads picked up this month"
+            icon={DollarSign}
+          />
           <StatCard label="Your Loads" value={String(driverData.totalLoads)} icon={Package} />
           <StatCard label="Active Now" value={String(driverData.activeLoads)} hint="Booked or in transit" icon={Truck} />
           <StatCard label="Total Miles" value={driverData.totalMiles.toLocaleString()} icon={Gauge} />
