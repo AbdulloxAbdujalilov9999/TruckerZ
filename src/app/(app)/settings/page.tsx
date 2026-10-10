@@ -69,6 +69,7 @@ export default async function SettingsPage() {
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                 <th className="px-5 py-3 font-medium">Name</th>
                 <th className="px-5 py-3 font-medium">Email</th>
+                <th className="px-5 py-3 font-medium">Phone</th>
                 <th className="px-5 py-3 font-medium">Role</th>
                 <th className="px-5 py-3 font-medium">Pay / Fee</th>
                 <th className="px-5 py-3 font-medium"></th>
@@ -79,6 +80,7 @@ export default async function SettingsPage() {
                 <tr key={u.id} className="border-b border-border last:border-0">
                   <td className="px-5 py-3 font-medium">{u.name}</td>
                   <td className="px-5 py-3 text-muted">{u.email}</td>
+                  <td className="px-5 py-3 text-muted">{u.phone ?? "—"}</td>
                   <td className="px-5 py-3 text-muted">{ROLE_LABELS[u.role]}</td>
                   <td className="px-5 py-3 text-muted">
                     {u.role === "DISPATCHER" && u.dispatchFeePercent != null
@@ -95,6 +97,7 @@ export default async function SettingsPage() {
                         id: u.id,
                         name: u.name,
                         email: u.email,
+                        phone: u.phone,
                         role: u.role,
                         dispatchFeePercent: u.dispatchFeePercent?.toString() ?? null,
                         driverPayType: u.driverPayType,

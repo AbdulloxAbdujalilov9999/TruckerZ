@@ -23,6 +23,7 @@ export async function createTeamMember(_prev: ActionState, formData: FormData): 
 
   const name = String(formData.get("name") || "").trim();
   const email = String(formData.get("email") || "").trim().toLowerCase();
+  const phone = String(formData.get("phone") || "").trim() || null;
   const password = String(formData.get("password") || "");
   const role = String(formData.get("role") || "") as Role;
   const dispatchFeePercent = formData.get("dispatchFeePercent")
@@ -45,6 +46,7 @@ export async function createTeamMember(_prev: ActionState, formData: FormData): 
     data: {
       name,
       email,
+      phone,
       passwordHash,
       role,
       companyId: owner.companyId,
@@ -64,6 +66,7 @@ export async function updateTeamMember(_prev: ActionState, formData: FormData): 
   const userId = String(formData.get("userId") || "");
   const name = String(formData.get("name") || "").trim();
   const email = String(formData.get("email") || "").trim().toLowerCase();
+  const phone = String(formData.get("phone") || "").trim() || null;
   const role = String(formData.get("role") || "") as Role;
   const newPassword = String(formData.get("newPassword") || "");
   const dispatchFeePercent = formData.get("dispatchFeePercent")
@@ -97,6 +100,7 @@ export async function updateTeamMember(_prev: ActionState, formData: FormData): 
     data: {
       name,
       email,
+      phone,
       role,
       ...(newPassword ? { passwordHash: await bcrypt.hash(newPassword, 10) } : {}),
       dispatchFeePercent: role === "DISPATCHER" ? dispatchFeePercent : null,

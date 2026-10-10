@@ -127,6 +127,7 @@ export default async function TrucksPage({
                 <th className="px-5 py-3 font-medium">Unit</th>
                 <th className="px-5 py-3 font-medium">Fleet</th>
                 <th className="px-5 py-3 font-medium">Type</th>
+                <th className="px-5 py-3 font-medium">Trailer</th>
                 <th className="px-5 py-3 font-medium">Driver</th>
                 <th className="px-5 py-3 font-medium">Status</th>
                 <th className="px-5 py-3 font-medium">Running Load</th>
@@ -135,9 +136,13 @@ export default async function TrucksPage({
             <tbody>
               {trucks.map((truck) => (
                 <tr key={truck.id} className="border-b border-border last:border-0">
-                  <td className="px-5 py-3 font-medium">{truck.unitNumber}</td>
+                  <td className="px-5 py-3 font-medium">
+                    {truck.unitNumber}
+                    {truck.vin && <div className="text-xs font-normal text-muted">VIN {truck.vin}</div>}
+                  </td>
                   <td className="px-5 py-3 text-muted">{truck.fleet.name}</td>
                   <td className="px-5 py-3 text-muted">{truck.type ?? "—"}</td>
+                  <td className="px-5 py-3 text-muted">{truck.trailerNumber ?? "—"}</td>
                   <td className="px-5 py-3 text-muted">{truck.driver?.name ?? "Unassigned"}</td>
                   <td className="px-5 py-3">
                     <TruckStatusBadge

@@ -81,7 +81,26 @@ export function CreateTruckButton({
                 <label className="mb-1 block text-sm font-medium">Type</label>
                 <input
                   name="type"
-                  placeholder="Dry Van"
+                  placeholder="2022 Peterbilt"
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium">VIN</label>
+                <input
+                  name="vin"
+                  placeholder="1XPBD49X1ND764507"
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Trailer #</label>
+                <input
+                  name="trailerNumber"
+                  placeholder="777"
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                 />
               </div>

@@ -12,6 +12,8 @@ export async function createTruck(_prev: ActionState, formData: FormData): Promi
   const fleetId = String(formData.get("fleetId") || "");
   const unitNumber = String(formData.get("unitNumber") || "").trim();
   const type = String(formData.get("type") || "").trim();
+  const vin = String(formData.get("vin") || "").trim();
+  const trailerNumber = String(formData.get("trailerNumber") || "").trim();
   const status = String(formData.get("status") || "ACTIVE");
   const driverId = String(formData.get("driverId") || "") || null;
 
@@ -29,6 +31,8 @@ export async function createTruck(_prev: ActionState, formData: FormData): Promi
       fleetId,
       unitNumber,
       type: type || null,
+      vin: vin || null,
+      trailerNumber: trailerNumber || null,
       status: status as "ACTIVE" | "IDLE" | "INACTIVE",
       driverId,
     },

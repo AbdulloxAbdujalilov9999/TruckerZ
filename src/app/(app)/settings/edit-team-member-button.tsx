@@ -10,6 +10,7 @@ type Member = {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   role: string;
   dispatchFeePercent: string | number | null;
   driverPayType: string | null;
@@ -115,6 +116,17 @@ export function EditTeamMemberButton({ member, isSelf }: { member: Member; isSel
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">Phone</label>
+              <input
+                name="phone"
+                type="tel"
+                defaultValue={member.phone ?? ""}
+                placeholder="Optional"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
             </div>
 
             {role === "DISPATCHER" && !isSelf && (
