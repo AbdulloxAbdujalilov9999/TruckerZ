@@ -21,30 +21,35 @@ export async function signupAction(
     return { error: "Password must be at least 8 characters." };
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    return { error: "An account with that email already exists." };
+  try {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return { error: "An account with that email already exists." };
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await prisma.$transaction(async (tx) => {
+      const company = await tx.company.create({
+        data: { name: companyName },
+      });
+      await tx.user.create({
+        data: {
+          email,
+          name,
+          passwordHash,
+          role: "OWNER",
+          companyId: company.id,
+        },
+      });
+      await tx.fleet.create({
+        data: { name: "Main Fleet", companyId: company.id },
+      });
+    });
+
+    return null;
+  } catch (err) {
+    console.error("Signup failed:", err);
+    return { error: "Something went wrong creating your account. Please try again shortly." };
   }
-
-  const passwordHash = await bcrypt.hash(password, 10);
-
-  await prisma.$transaction(async (tx) => {
-    const company = await tx.company.create({
-      data: { name: companyName },
-    });
-    await tx.user.create({
-      data: {
-        email,
-        name,
-        passwordHash,
-        role: "OWNER",
-        companyId: company.id,
-      },
-    });
-    await tx.fleet.create({
-      data: { name: "Main Fleet", companyId: company.id },
-    });
-  });
-
-  return null;
 }
